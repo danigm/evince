@@ -33,7 +33,7 @@
 #define EV_VIEW_ACCESSIBLE(obj)      (G_TYPE_CHECK_INSTANCE_CAST ((obj), EV_TYPE_VIEW_ACCESSIBLE, EvViewAccessible))
 #define EV_IS_VIEW_ACCESSIBLE(obj)   (G_TYPE_CHECK_INSTANCE_TYPE ((obj), EV_TYPE_VIEW_ACCESSIBLE))
 
-static GType ev_view_accessible_get_type (void);
+static gpointer accessible_parent_class;
 
 enum {
 	ACTION_SCROLL_UP,
@@ -64,10 +64,32 @@ typedef struct {
 	guint current_page;
 } EvViewAccessiblePriv;
 
-typedef GtkAccessibleClass EvViewAccessibleClass;
-typedef GtkAccessible EvViewAccessible;
+typedef struct _EvViewAccessible EvViewAccessible;
+struct _EvViewAccessible
+{
+	GtkAccessible parent;
+};
+
+typedef struct _EvViewAccessibleClass EvViewAccessibleClass;
+struct _EvViewAccessibleClass
+{
+	GtkAccessibleClass parent_class;
+};
 
 #define EV_VIEW_ACCESSIBLE_GET_PRIVATE(inst) (G_TYPE_INSTANCE_GET_PRIVATE ((inst), EV_TYPE_VIEW_ACCESSIBLE, EvViewAccessiblePriv))
+
+static void
+ev_view_accessible_initialize (AtkObject *obj,
+			       gpointer   data)
+{
+	EvView *view = data;
+
+	if (ATK_OBJECT_CLASS (accessible_parent_class)->initialize != NULL) {
+		ATK_OBJECT_CLASS (accessible_parent_class)->initialize (obj, data);
+	}
+
+	gtk_accessible_set_widget (GTK_ACCESSIBLE (obj), GTK_WIDGET (data));
+}
 
 static void
 ev_view_accessible_finalize (GObject *object)
@@ -87,8 +109,12 @@ ev_view_accessible_finalize (GObject *object)
 static void ev_view_accessible_class_init (EvViewAccessibleClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
+	AtkObjectClass *atk_class = ATK_OBJECT_CLASS (klass);
+
+	accessible_parent_class = g_type_class_peek_parent (klass);
 
 	object_class->finalize = ev_view_accessible_finalize;
+	atk_class->initialize = ev_view_accessible_initialize;
 
 	g_type_class_add_private (klass, sizeof (EvViewAccessiblePriv));
 }
@@ -811,65 +837,14 @@ static void ev_view_accessible_action_iface_init (AtkActionIface * iface)
 	iface->set_description = ev_view_accessible_action_set_description;
 }
 
-GType ev_view_accessible_get_type (void)
+static void ev_view_accessible_init (EvViewAccessible *accessible)
 {
-	static GType type = 0;
-
-	if (G_UNLIKELY (type == 0)) {
-		GTypeInfo tinfo = {
-			0,	/* class size */
-			(GBaseInitFunc) NULL,	/* base init */
-			(GBaseFinalizeFunc) NULL,	/* base finalize */
-			(GClassInitFunc) ev_view_accessible_class_init,	/* class init */
-			(GClassFinalizeFunc) NULL,	/* class finalize */
-			NULL,	/* class data */
-			0,	/* instance size */
-			0,	/* nb preallocs */
-			(GInstanceInitFunc) NULL,	/* instance init */
-			NULL	/* value table */
-		};
-
-		const GInterfaceInfo atk_text_info = {
-			(GInterfaceInitFunc)
-			ev_view_accessible_text_iface_init,
-			(GInterfaceFinalizeFunc) NULL,
-			NULL
-		};
-
-		const GInterfaceInfo atk_action_info = {
-			(GInterfaceInitFunc)
-			ev_view_accessible_action_iface_init,
-			(GInterfaceFinalizeFunc) NULL,
-			NULL
-		};
-		/*
-		 * Figure out the size of the class and instance
-		 * we are deriving from
-		 */
-		AtkObjectFactory *factory;
-		GType derived_type;
-		GTypeQuery query;
-		GType derived_atk_type;
-
-		derived_type = g_type_parent (EV_TYPE_VIEW);
-		factory = atk_registry_get_factory (atk_get_default_registry (),
-		                                    derived_type);
-		derived_atk_type = atk_object_factory_get_accessible_type (factory);
-
-		g_type_query (derived_atk_type, &query);
-		tinfo.class_size = query.class_size;
-		tinfo.instance_size = query.instance_size;
-
-		type = g_type_register_static (derived_atk_type, "EvViewAccessible",
-		                               &tinfo, 0);
-		g_type_add_interface_static (type, ATK_TYPE_TEXT,
-		                             &atk_text_info);
-		g_type_add_interface_static (type, ATK_TYPE_ACTION,
-		                             &atk_action_info);
-	}
-
-	return type;
 }
+
+G_DEFINE_TYPE_WITH_CODE (EvViewAccessible, ev_view_accessible, GTK_TYPE_ACCESSIBLE,
+			 G_IMPLEMENT_INTERFACE (ATK_TYPE_TEXT, ev_view_accessible_text_iface_init);
+			 G_IMPLEMENT_INTERFACE (ATK_TYPE_ACTION, ev_view_accessible_action_iface_init);
+			 );
 
 static AtkObject *ev_view_accessible_new(GObject * obj)
 {

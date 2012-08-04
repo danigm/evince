@@ -28,6 +28,7 @@
 #include "ev-view.h"
 
 GType ev_view_accessible_factory_get_type (void);
+GType ev_view_accessible_get_type (void);
 
 #endif  /* __EV_VIEW_ACCESSIBLE_H__ */
 
