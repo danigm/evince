@@ -1,0 +1,4 @@
+[Evince Backend]
+Module=epubdocument
+_TypeDescription=EPUB Books
+MimeType=application/epub+zip

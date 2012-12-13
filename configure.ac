@@ -498,6 +498,25 @@ fi
 AM_CONDITIONAL(ENABLE_PDF, test x$enable_pdf = xyes)
 dnl ================== end of pdf checks ============================================
 
+dnl ================== epub checks ===================================================
+AC_ARG_ENABLE([epub],
+  [AS_HELP_STRING([--disable-epub], [Disable the EPUB support])],
+  [enable_epub=$enableval],
+  [enable_epub=yes])
+
+if test "x$enable_epub" = "xyes"; then
+    LIBGEPUB_REQUIRED=0.1
+    PKG_CHECK_MODULES(LIBGEPUB, libgepub >= $LIBGEPUB_REQUIRED,enable_epub=yes,enable_epub=no)
+
+    evince_save_LIBS=$LIBS
+    LIBS="$LIBS $LIBGEPUB_LIBS"
+    LIBS=$evince_save_LIBS
+fi
+
+AM_CONDITIONAL(ENABLE_EPUB, test x$enable_epub = xyes)
+dnl ================== end of epub checks ============================================
+
+
 dnl libspectre (used by ps and dvi backends)
 SPECTRE_REQUIRED=0.2.0 
 PKG_CHECK_MODULES(SPECTRE, libspectre >= $SPECTRE_REQUIRED,have_spectre=yes,have_spectre=no)
@@ -740,6 +759,7 @@ backend/pdf/Makefile
 backend/ps/Makefile
 backend/tiff/Makefile
 backend/xps/Makefile
+backend/epub/Makefile
 cut-n-paste/Makefile
 cut-n-paste/gimpcellrenderertoggle/Makefile
 cut-n-paste/smclient/Makefile
@@ -823,6 +843,7 @@ DJVU .....................:  $enable_djvu
 DVI ......................:  $enable_dvi
 Comics ...................:  $enable_comics
 XPS ......................:  $enable_xps
+EPUB .....................:  $enable_epub
 
 
 FEATURES
